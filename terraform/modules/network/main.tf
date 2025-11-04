@@ -1,60 +1,91 @@
-resource "azurerm_virtual_network" "vnet" {
-  name                = "bookreview-vnet"
-  address_space       = ["10.0.0.0/16"]
-  location            = var.location
-  resource_group_name = var.resource_group_name
+# VPC
+resource "aws_vpc" "main" {
+  cidr_block           = var.vpc_cidr
+  enable_dns_support   = true
+  enable_dns_hostnames = true
+
+  tags = {
+    Name = "${var.application_name}-${var.environment}-vpc"
+  }
 }
 
-resource "azurerm_subnet" "public_subnet" {
-  name                 = "public-subnet"
-  resource_group_name  = var.resource_group_name
-  virtual_network_name = azurerm_virtual_network.vnet.name
-  address_prefixes     = ["10.0.1.0/24"]
+# Public Subnet
+resource "aws_subnet" "public" {
+  vpc_id                  = aws_vpc.main.id
+  cidr_block              = var.public_subnet_cidr
+  map_public_ip_on_launch = true
+
+  tags = {
+    Name = "${var.application_name}-${var.environment}-public-subnet"
+  }
 }
 
-resource "azurerm_subnet_network_security_group_association" "public_subnet_nsg_assoc" {
-  subnet_id                 = azurerm_subnet.public_subnet.id
-  network_security_group_id = azurerm_network_security_group.nsg.id
+# Internet Gateway
+resource "aws_internet_gateway" "gw" {
+  vpc_id = aws_vpc.main.id
+
+  tags = {
+    Name = "${var.application_name}-${var.environment}-igw"
+  }
 }
 
-resource "azurerm_network_security_group" "nsg" {
-  name                = "bookreview-nsg"
-  location            = var.location
-  resource_group_name = var.resource_group_name
+# Route Table for public subnet
+resource "aws_route_table" "public" {
+  vpc_id = aws_vpc.main.id
 
-  security_rule {
-    name                       = "SSH"
-    priority                   = 1001
-    direction                  = "Inbound"
-    access                     = "Allow"
-    protocol                   = "Tcp"
-    source_port_range          = "*"
-    destination_port_range     = "22"
-    source_address_prefix      = "*"
-    destination_address_prefix = "*"
+  route {
+    cidr_block = "0.0.0.0/0"
+    gateway_id = aws_internet_gateway.gw.id
   }
 
-  security_rule {
-    name                       = "Backend-Port"
-    priority                   = 1002
-    direction                  = "Inbound"
-    access                     = "Allow"
-    protocol                   = "Tcp"
-    source_port_range          = "*"
-    destination_port_range     = "3001"
-    source_address_prefix      = "*"
-    destination_address_prefix = "*"
+  tags = {
+    Name = "${var.application_name}-${var.environment}-public-rt"
+  }
+}
+
+resource "aws_route_table_association" "public_assoc" {
+  subnet_id      = aws_subnet.public.id
+  route_table_id = aws_route_table.public.id
+}
+
+# Security Group (equivalent to Azure NSG)
+resource "aws_security_group" "app_sg" {
+  name        = "${var.application_name}-${var.environment}-sg"
+  description = "Allow SSH, frontend and backend ports"
+  vpc_id      = aws_vpc.main.id
+
+  ingress {
+    description = "SSH"
+    from_port   = 22
+    to_port     = 22
+    protocol    = "tcp"
+    cidr_blocks = ["0.0.0.0/0"]
   }
 
-  security_rule {
-    name                       = "Frontend-Port"
-    priority                   = 1003
-    direction                  = "Inbound"
-    access                     = "Allow"
-    protocol                   = "Tcp"
-    source_port_range          = "*"
-    destination_port_range     = "3000"
-    source_address_prefix      = "*"
-    destination_address_prefix = "*"
+  ingress {
+    description = "Backend app port"
+    from_port   = 3001
+    to_port     = 3001
+    protocol    = "tcp"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+
+  ingress {
+    description = "Frontend app port"
+    from_port   = 3000
+    to_port     = 3000
+    protocol    = "tcp"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+
+  egress {
+    from_port   = 0
+    to_port     = 0
+    protocol    = "-1"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+
+  tags = {
+    Name = "${var.application_name}-${var.environment}-sg"
   }
 }

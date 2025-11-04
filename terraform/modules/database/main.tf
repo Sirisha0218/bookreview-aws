@@ -1,25 +1,36 @@
-resource "azurerm_mysql_flexible_server" "mysql" {
-  name                   = "bookreview-db"
-  resource_group_name    = var.resource_group_name
-  location               = var.location
-  administrator_login    = var.mysql_admin_username
-  administrator_password = var.mysql_admin_password
-  sku_name               = "B_Standard_B1ms"
-  version                = "5.7"
+# Security group for MySQL
+resource "aws_security_group" "mysql_sg" {
+  name        = "mysql-sg"
+  description = "Allow MySQL access from backend EC2 instances"
+  vpc_id      = var.vpc_id
+
+  ingress {
+    from_port       = 3306
+    to_port         = 3306
+    protocol        = "tcp"
+    security_groups = [var.backend_sg_id]   # allow from backend SG
+  }
+
+  egress {
+    from_port   = 0
+    to_port     = 0
+    protocol    = "-1"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
 }
 
-resource "azurerm_mysql_flexible_database" "bookreviews_db" {
-  name                = var.mysql_database_name
-  resource_group_name = var.resource_group_name
-  server_name         = azurerm_mysql_flexible_server.mysql.name
-  charset             = "utf8mb4"
-  collation           = "utf8mb4_unicode_ci"
-}
-
-resource "azurerm_mysql_flexible_server_firewall_rule" "allow_backend_vm" {
-  name                = "allow-backend-vm"
-  resource_group_name = var.resource_group_name
-  server_name         = azurerm_mysql_flexible_server.mysql.name
-  start_ip_address    = var.backend_vm_public_ip
-  end_ip_address      = var.backend_vm_public_ip
+# RDS MySQL instance
+resource "aws_db_instance" "mysql" {
+  identifier              = "bookreview-db"
+  allocated_storage       = 20
+  engine                  = "mysql"
+  engine_version          = "8.0"              # 5.7 is deprecated
+  instance_class          = "db.t3.micro"
+  username                = var.mysql_admin_username
+  password                = var.mysql_admin_password
+  db_name                 = var.mysql_database_name
+  publicly_accessible     = true
+  skip_final_snapshot     = true
+  deletion_protection     = false
+  vpc_security_group_ids  = [aws_security_group.mysql_sg.id]
 }

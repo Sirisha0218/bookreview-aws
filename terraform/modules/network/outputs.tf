@@ -1,7 +1,11 @@
 output "public_subnet_id" {
-  value = azurerm_subnet.public_subnet.id
+  value = aws_subnet.public.id
 }
 
-output "nsg_id" {
-  value = azurerm_network_security_group.nsg.id
+output "sg_id" {
+  value = aws_security_group.app_sg.id
+}
+
+output "vpc_id" {
+  value = aws_vpc.main.id
 }
