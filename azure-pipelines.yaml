@@ -6,14 +6,20 @@ trigger:
     include:
       - main
 
+# -------------------------
+# Global Variables
+# -------------------------
 variables:
-  - group: infra-secrets
   - group: Terraform-AWS-Creds   # contains AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY, AWS_DEFAULT_REGION
+  - name: AWS_REGION
+    value: "us-east-1"
+  - name: EC2_KEYPAIR_NAME
+    value: "ubuntu-key"
 
+# -------------------------
+# Stage: AWS Infrastructure
+# -------------------------
 stages:
-# -------------------------
-# Stage: AWS Infra
-# -------------------------
 - stage: AWSInfra
   displayName: 'Provision AWS Infrastructure'
   jobs:
@@ -23,6 +29,9 @@ stages:
       name: 'linux-hosted-agent-pool'
 
     steps:
+    # -------------------------
+    # Step 1: Install Terraform
+    # -------------------------
     - script: |
         sudo apt-get update -y
         sudo apt-get install -y unzip curl
@@ -32,36 +41,51 @@ stages:
         terraform -version
       displayName: "Install Terraform"
 
+    # -------------------------
+    # Step 2: Generate tfvars file
+    # -------------------------
     - script: |
-        echo "Generating terraform.tfvars from pipeline variables"
+        echo "Generating terraform.auto.tfvars from pipeline variables"
         cat > terraform/pipeline.auto.tfvars <<EOF
-        application_name = "DevOps1-pm"
+        application_name = "book-review-app"
         environment      = "dev"
-        aws_region       = "$(AWS_DEFAULT_REGION)"
+        aws_region       = "$(AWS_REGION)"
 
         vpc_cidr           = "10.0.0.0/16"
         public_subnet_cidr = "10.0.1.0/24"
 
-        ami_id        = "ami-0f9fc25dd2506cf6d"   # Ubuntu 22.04 LTS ARM64 in us-east-1
+        ami_id        = "ami-0f9fc25dd2506cf6d"   # Ubuntu 22.04 LTS ARM64 (us-east-1)
         instance_type = "t4g.small"
-        key_name      = "$(EC2KeyPairName)"       # stored in variable group
-
-        mysql_admin_username = "$(mysqlAdminUser)"
-        mysql_admin_password = "$(mysqlAdminPassword)"
-        mysql_database_name  = "bookreviews_dev"
+        key_name      = "$(EC2_KEYPAIR_NAME)"
         EOF
-      displayName: 'Generate pipeline.auto.tfvars'
 
-    - script: |
-        terraform init -input=false
+        echo "terraform.auto.tfvars created:"
+        cat terraform/pipeline.auto.tfvars
+      displayName: 'Generate terraform.auto.tfvars'
+
+    # -------------------------
+    # Step 3: Terraform Init
+    # -------------------------
+    - script: terraform init -input=false
       workingDirectory: $(System.DefaultWorkingDirectory)/terraform
       displayName: "Terraform Init"
 
-    - script: |
-        terraform apply -input=false -auto-approve -var-file="pipeline.auto.tfvars"
+    # -------------------------
+    # Step 4: Terraform Apply
+    # -------------------------
+    - script: terraform apply -input=false -auto-approve -var-file="pipeline.auto.tfvars"
       workingDirectory: $(System.DefaultWorkingDirectory)/terraform
       displayName: "Terraform Apply"
       env:
         AWS_ACCESS_KEY_ID: $(AWS_ACCESS_KEY_ID)
         AWS_SECRET_ACCESS_KEY: $(AWS_SECRET_ACCESS_KEY)
-        AWS_DEFAULT_REGION: $(AWS_DEFAULT_REGION)
+        AWS_DEFAULT_REGION: $(AWS_REGION)
+
+    # -------------------------
+    # Step 5: Output useful info
+    # -------------------------
+    - script: |
+        echo "Terraform Outputs:"
+        terraform output
+      workingDirectory: $(System.DefaultWorkingDirectory)/terraform
+      displayName: "Print Terraform Outputs"
