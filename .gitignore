@@ -18,6 +18,8 @@ ansible/group_vars/*.env
 
 # Ignore variable files if they contain secrets
 terraform/*.tfvars.json
+terraform.tfvars
+*.auto.tfvars
 
 # === General ===
 *.DS_Store

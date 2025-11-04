@@ -6,4 +6,7 @@ variable "vnet_subnet_id" {}
 variable "application_name" {}
 variable "environment" {}
 variable "vm_size" {}
-variable "ssh_public_key" {}
+variable "ssh_public_key" {
+  description = "SSH public key string"
+  type        = string
+}
