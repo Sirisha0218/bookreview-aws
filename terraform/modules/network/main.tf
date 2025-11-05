@@ -9,14 +9,27 @@ resource "aws_vpc" "main" {
   }
 }
 
-# Public Subnet
-resource "aws_subnet" "public" {
+# Public Subnet A (us-east-1a)
+resource "aws_subnet" "public_a" {
   vpc_id                  = aws_vpc.main.id
-  cidr_block              = var.public_subnet_cidr
+  cidr_block              = "10.0.1.0/24"
+  availability_zone       = "us-east-1a"
   map_public_ip_on_launch = true
 
   tags = {
-    Name = "${var.application_name}-${var.environment}-public-subnet"
+    Name = "${var.application_name}-${var.environment}-public-subnet-a"
+  }
+}
+
+# Public Subnet B (us-east-1b)
+resource "aws_subnet" "public_b" {
+  vpc_id                  = aws_vpc.main.id
+  cidr_block              = "10.0.2.0/24"
+  availability_zone       = "us-east-1b"
+  map_public_ip_on_launch = true
+
+  tags = {
+    Name = "${var.application_name}-${var.environment}-public-subnet-b"
   }
 }
 
@@ -29,7 +42,7 @@ resource "aws_internet_gateway" "gw" {
   }
 }
 
-# Route Table for public subnet
+# Route Table for public subnets
 resource "aws_route_table" "public" {
   vpc_id = aws_vpc.main.id
 
@@ -43,12 +56,18 @@ resource "aws_route_table" "public" {
   }
 }
 
-resource "aws_route_table_association" "public_assoc" {
-  subnet_id      = aws_subnet.public.id
+# Associate both subnets with the route table
+resource "aws_route_table_association" "public_assoc_a" {
+  subnet_id      = aws_subnet.public_a.id
   route_table_id = aws_route_table.public.id
 }
 
-# Security Group (equivalent to Azure NSG)
+resource "aws_route_table_association" "public_assoc_b" {
+  subnet_id      = aws_subnet.public_b.id
+  route_table_id = aws_route_table.public.id
+}
+
+# Security Group
 resource "aws_security_group" "app_sg" {
   name        = "${var.application_name}-${var.environment}-sg"
   description = "Allow SSH, frontend and backend ports"
@@ -87,5 +106,15 @@ resource "aws_security_group" "app_sg" {
 
   tags = {
     Name = "${var.application_name}-${var.environment}-sg"
+  }
+}
+
+# DB Subnet Group (for RDS)
+resource "aws_db_subnet_group" "mysql_subnet_group" {
+  name       = "${var.application_name}-${var.environment}-mysql-subnet-group"
+  subnet_ids = [aws_subnet.public_a.id, aws_subnet.public_b.id]
+
+  tags = {
+    Name = "${var.application_name}-${var.environment}-mysql-subnet-group"
   }
 }
