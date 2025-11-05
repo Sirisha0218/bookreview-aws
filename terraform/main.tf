@@ -61,7 +61,7 @@ resource "aws_security_group" "allow_ssh" {
 
 # EC2 frontend
 resource "aws_instance" "frontend" {
-  ami           = "ami-0c02fb55956c7d316" # Ubuntu 22.04 in us-east-1
+  ami           = "ami-08c40ec9ead489470" # Ubuntu 22.04 x86_64 AMI in us-east-1
   instance_type = var.instance_type
   subnet_id     = aws_subnet.public.id
   key_name      = var.key_name
@@ -74,7 +74,7 @@ resource "aws_instance" "frontend" {
 
 # EC2 backend
 resource "aws_instance" "backend" {
-  ami           = "ami-0c02fb55956c7d316"
+  ami           = "ami-0c101f26f147fa7fd" # Amazon Linux 2 x86_64 in us-east-1
   instance_type = var.instance_type
   subnet_id     = aws_subnet.public.id
   key_name      = var.key_name
@@ -90,7 +90,7 @@ resource "aws_db_instance" "mysql" {
   allocated_storage      = 20
   engine                 = "mysql"
   engine_version         = "8.0"
-  instance_class         = "db.t4g.micro"   # free-tier eligible for RDS
+  instance_class         = "db.t3.micro"   # free-tier eligible for RDS
   username               = "mysqladmin"     # hard-coded
   password               = "SuperSecret123!" # hard-coded
   db_name                = "bookreviews_dev"

@@ -25,7 +25,7 @@ resource "aws_db_instance" "mysql" {
   allocated_storage       = 20
   engine                  = "mysql"
   engine_version          = "8.0"              # 5.7 is deprecated
-  instance_class          = "db.t4g.micro"
+  instance_class          = "db.t3.micro"
   username                = var.mysql_admin_username
   password                = var.mysql_admin_password
   db_name                 = var.mysql_database_name
