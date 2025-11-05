@@ -180,4 +180,6 @@ resource "aws_db_instance" "mysql" {
   db_subnet_group_name   = aws_db_subnet_group.mysql_subnet_group.name
 
   tags = {
-    Name = "mysql-db
+    Name = "mysql-db"
+  }
+}
