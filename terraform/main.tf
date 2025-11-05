@@ -63,7 +63,7 @@ resource "aws_security_group" "allow_ssh" {
 resource "aws_instance" "frontend" {
   ami           = "ami-08c40ec9ead489470"   # Ubuntu 22.04 LTS x86_64 in us-east-1
   instance_type = var.instance_type
-  subnet_id     = aws_subnet.public.id
+  subnet_id     = aws_subnet.public_a.id
   key_name      = var.key_name
   vpc_security_group_ids = [aws_security_group.allow_ssh.id]
 
@@ -76,7 +76,7 @@ resource "aws_instance" "frontend" {
 resource "aws_instance" "backend" {
   ami           = "ami-0c101f26f147fa7fd"   # Amazon Linux 2 x86_64 in us-east-1
   instance_type = var.instance_type
-  subnet_id     = aws_subnet.public.id
+  subnet_id     = aws_subnet.public_b.id
   key_name      = var.key_name
   vpc_security_group_ids = [aws_security_group.allow_ssh.id]
 
