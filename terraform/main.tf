@@ -61,7 +61,7 @@ resource "aws_security_group" "allow_ssh" {
 
 # EC2 frontend
 resource "aws_instance" "frontend" {
-  ami           = var.web_ami_id   # use the new variable
+  ami           = "ami-08c40ec9ead489470"   # Ubuntu 22.04 LTS x86_64 in us-east-1
   instance_type = var.instance_type
   subnet_id     = aws_subnet.public.id
   key_name      = var.key_name
@@ -74,16 +74,17 @@ resource "aws_instance" "frontend" {
 
 # EC2 backend
 resource "aws_instance" "backend" {
-  ami           = var.db_ami_id    # use the new variable
+  ami           = "ami-0c101f26f147fa7fd"   # Amazon Linux 2 x86_64 in us-east-1
   instance_type = var.instance_type
   subnet_id     = aws_subnet.public.id
   key_name      = var.key_name
   vpc_security_group_ids = [aws_security_group.allow_ssh.id]
 
   tags = {
-    Name = "backend"  
+    Name = "backend"
   }
 }
+
 
 resource "aws_db_subnet_group" "mysql_subnet_group" {
   name       = "mysql-subnet-group"
