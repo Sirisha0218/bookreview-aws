@@ -63,9 +63,9 @@ resource "aws_security_group" "allow_ssh" {
 resource "aws_instance" "frontend" {
   ami           = "ami-08c40ec9ead489470"   # Ubuntu 22.04 LTS x86_64 in us-east-1
   instance_type = var.instance_type
-  subnet_id     = aws_subnet.public_a.id
+  subnet_id     = aws_subnet.public_a.id    # use dynamic subnet A
   key_name      = var.key_name
-  vpc_security_group_ids = [aws_security_group.allow_ssh.id]
+  vpc_security_group_ids = [aws_security_group.app_sg.id]  # match SG name in network
 
   tags = {
     Name = "frontend"
@@ -76,19 +76,19 @@ resource "aws_instance" "frontend" {
 resource "aws_instance" "backend" {
   ami           = "ami-0c101f26f147fa7fd"   # Amazon Linux 2 x86_64 in us-east-1
   instance_type = var.instance_type
-  subnet_id     = aws_subnet.public_b.id
+  subnet_id     = aws_subnet.public_b.id    # use dynamic subnet B
   key_name      = var.key_name
-  vpc_security_group_ids = [aws_security_group.allow_ssh.id]
+  vpc_security_group_ids = [aws_security_group.app_sg.id]
 
   tags = {
     Name = "backend"
   }
 }
 
-
+# DB Subnet Group (must span 2 AZs)
 resource "aws_db_subnet_group" "mysql_subnet_group" {
   name       = "mysql-subnet-group"
-  subnet_ids = [aws_subnet.public.id]  # or private subnets if you have them
+  subnet_ids = [aws_subnet.public_a.id, aws_subnet.public_b.id]  # use both subnets
 
   tags = {
     Name = "mysql-subnet-group"
@@ -101,12 +101,13 @@ resource "aws_db_instance" "mysql" {
   engine                 = "mysql"
   engine_version         = "8.0"
   instance_class         = "db.t3.micro"   # free-tier eligible for RDS
-  username               = "mysqladmin"     # hard-coded
-  password               = "SuperSecret123!" # hard-coded
+  username               = "mysqladmin"     # hard-coded for now
+  password               = "SuperSecret123!" # hard-coded for now
   db_name                = "bookreviews_dev"
   skip_final_snapshot    = true
   publicly_accessible    = true
-  vpc_security_group_ids = [aws_security_group.allow_ssh.id]
+
+  vpc_security_group_ids = [aws_security_group.app_sg.id]
   db_subnet_group_name   = aws_db_subnet_group.mysql_subnet_group.name
 }
 
